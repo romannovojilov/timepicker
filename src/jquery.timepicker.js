@@ -1,9 +1,28 @@
 (function ($) {
     $.fn.timepicker = function (option) {
         var setting = {
-            format: 'hh:mm:ss:qq'
+            
         };
         if (option) $.extend(setting, option);
+
+        function Event() {
+            var list = [];
+            this.add = function(fn) {
+                list.push(fn);
+            }
+        
+            this.call = function(sender, eventArgs) {
+                for(var i = 0; i < list.length; i++) {
+                    list[i](sender, eventArgs);
+                }
+            }
+        
+            this.toEmpty = function() {
+                list = [];
+            }
+        }
+
+        var onchange = new Event();
 
         var params = [
             {
@@ -29,69 +48,103 @@
                     max: 59,
                     current: 0
                 }
-            },
-            {
-                name: 'qq',
-                value: {
-                    min: 0,
-                    max: 1,
-                    current: 0
-                }
             }
         ];
 
-        var scrollTimeObjects = function (sender, isUp) {
-            var val = parseInt($(sender).text());
-            var minVal = parseInt($(sender).attr('data-minval'));
-            var maxVal = parseInt($(sender).attr('data-maxval'));
-            $(sender).find('span').text(isUp ? (val + 1 > maxVal ? 0: val + 1): (val - 1 < minVal ? maxVal: val - 1));
-        };
-
         var wrapper = undefined, 
-            spliter = undefined,
             items = undefined;
 
-        var hasMask = function(format, param) {
-            if(param)
-                return format.indexOf(param.name) > -1;
-            return false;
-        }
-
-        var generate = function() {
+        var initialize = function() {
             wrapper = $('<div class="timepicker-box" onclick="event.cancelBubble = true;"></div>');
-            spliter = $('<span class="timepicker-spliter"></span>');
             items = [];
             for(var i = 0; i < params.length; i++) {
+
+                var item = $('<div class="timepicker-item"></div>');
+                var checker = $('<div data-minval="' + params[i].value.min + '" data-maxval="' + params[i].value.max + '" class="timepicker-checker">' + params[i].value.current + '</div>');
+                checker.bind('click', function() {
+                    $(this).text($(this).attr('data-minval'));
+                });
+                var toUp = $('<a href="#" class="timepicker-checker-button"></a>');
+                toUp.bind('click', function() {
+                    update($(this).siblings('.timepicker-checker'), true);
+                    return false;
+                });
+                var toDown = $('<a href="#" class="timepicker-checker-button"></a>');     
+                toDown.bind('click', function() {
+                    update($(this).siblings('.timepicker-checker'), false);
+                    return false;
+                });
+
+                item.append(toUp)
+                    .append(checker)
+                    .append(toDown);
                 
-                items[params[i].name] = $('<div data-minval="' + params[i].value.min + '" data-maxval="' + params[i].value.max + '" class="timepicker-checker"><a href="" class="timepicker-checker-button"></a><span>' + params[i].value.current + '</span><a href="" class="timepicker-checker-button"></a></div>');
+                items[params[i].name] = item;
                 items[params[i].name].bind('mousewheel DOMMouseScroll', function (event) {
-                    scrollTimeObjects($(this), event.originalEvent.wheelDelta > 0 || event.originalEvent.detail < 0);
+                    update($(this).find('.timepicker-checker'), event.originalEvent.wheelDelta > 0 || event.originalEvent.detail < 0);
                 });
             }
         }
-        generate();
+        initialize();
 
-        var render = function(format) {
+        var update = function (sender, isUp) {
+            var val = parseInt($(sender).text());
+            var minVal = parseInt($(sender).attr('data-minval'));
+            var maxVal = parseInt($(sender).attr('data-maxval'));
+            $(sender).text(isUp ? (val + 1 > maxVal ? 0: val + 1): (val - 1 < minVal ? maxVal: val - 1));
+            
+
+            currentInput.val($(sender).text()).focus();
+
+            onchange.call(currentInput, {
+
+            });
+        };
+
+        
+
+        var currentInput = undefined;
+        var render = function(input) {
+            currentInput = input;
             wrapper.children('.timepicker-spliter').remove();
-            for(var i = 0; i < params.length; i++) {
+            for (var i = 0; i < params.length; i++) {
                 var delta = 1;
-                if(hasMask(format, params[i])) {
-                    wrapper.append(items[params[i].name]);
-                    if (i+delta < params.length)
-                        wrapper.append(spliter.clone());
-                } else {
-                    items[params[i].name].unwrap();
-                }
+                wrapper.append(items[params[i].name]);
+                if (i + delta < params.length)
+                    wrapper.append('<span class="timepicker-spliter"></span>');
             }
+            setPosition();
+
+            $('body').append(wrapper);
+            wrapper.show();
+
             return wrapper;
         }
 
+        var setPosition = function() {
+            if(currentInput) 
+                $(wrapper).css('left', ($(currentInput).offset().left) + 'px')
+                    .css('top', ($(currentInput).offset().top + $(currentInput).outerHeight()) + 'px');
+        }
+
+        $(window).bind('resize', setPosition);
+        $(document).bind('click', function() {
+            wrapper.hide();
+        });
+
         return this.each(function () {
-            $(this).focus(function() {
-                var format = $(this).attr('data-format') == undefined ? setting.format : $(this).attr('data-format');
-                
-                $('body').append(render(format));
+            $(this).attr('onclick', 'event.cancelBubble = true;');
+
+            $(this).bind('focus', function () {
+                render($(this));
             });
+
+            $(this).bind('keydown', function (e) {
+                if(e.keyCode == 9) {
+                    wrapper.hide();
+                }
+            });
+
         });
     }
 })(jQuery);
