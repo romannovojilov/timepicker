@@ -1,0 +1,23 @@
+{
+  "requires": true,
+  "lockfileVersion": 1,
+  "dependencies": {},
+  "name": "timepicker",
+  "description": "This is easy-to-use jQuery timepicker. (RU) Это легкий в исопльзовании jQuery плагин, для удобного назначения времени.",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/romannovojilov/timepicker.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/romannovojilov/timepicker/issues"
+  },
+  "homepage": "https://github.com/romannovojilov/timepicker#readme"
+}
