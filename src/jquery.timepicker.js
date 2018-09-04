@@ -48,9 +48,13 @@
                 return current;
             }
 
+            this.getName = function() {
+                return name;
+            }
+
             this.render = function() {
                 var item = $('<div class="timepicker-item"></div>');
-                var checker = $('<div data-minval="' + minval + '" data-maxval="' + maxval + '" class="timepicker-checker">' + current + '</div>');
+                var checker = $('<div class="timepicker-checker">' + current + '</div>');
                 checker.bind('click', function() {
                     self.setVal(minval);
                 });
@@ -79,18 +83,28 @@
 
                 return item;
             }
+
+            this.reset = function() {
+                self.setVal(minval);
+            }
         }
 
-        function TimePicker(params) {
+        function TimePicker(items) {
             var self = this;
+
+            var onchange = new Event();
+            this.addObserver = function(callback) {
+                onchange.add(callback);
+            }
 
             var wrapper = $('<div class="timepicker-box" onclick="event.cancelBubble = true;"></div>');
             this.render = function() {
                 wrapper.html('').hide();
-                for(var i = 0; i < params.length; i++) {
-                    wrapper.append(params[i].render());
-                    if(i+1 < params.length)
+                for(var i = 0; i < items.length; i++) {
+                    wrapper.append(items[i].render());
+                    if(i+1 < items.length)
                         wrapper.append('<span class="timepicker-spliter"></span>');
+                    items[i].addObserver(onchange.call);
                 }
                 return wrapper;
             }
@@ -108,67 +122,103 @@
                 wrapper.hide();
             }
 
+            this.reset = function() {
+                for(var i = 0; i < items.length; i++)
+                    items[i].reset();
+            }
+
+            this.getItems = function() {
+                return items;
+            }
+
         }
 
-        var params = [
-            new TimePickerItem({
-                name: 'hh',
-                maxval: 23
-            }),
-            new TimePickerItem({
-                name: 'mm'
-            }),
-            new TimePickerItem({
-                name: 'ss'
-            }),
-        ];
+        function TimePickerController(picker) {
+            var self = this;
+            var input = null;
 
-        var picker = new TimePicker(params); 
+            var setPosition = function() {
+                if(input) 
+                    picker.setPosition($(input).offset().left, $(input).offset().top + $(input).outerHeight());
+            }
+            $(window).bind('resize', setPosition);
 
-        var render = function() {
-            picker.render().appendTo('body');
-        }
-        render();
-        
-        var currentInput = undefined;
-        var initialize = function() {
-            currentInput = $(this);
-            setPosition();
-            picker.show();
-        }
-
-        var setPosition = function() {
-            if(currentInput) 
-                picker.setPosition($(currentInput).offset().left, $(currentInput).offset().top + $(currentInput).outerHeight());
-        }
-
-        $(window).bind('resize', setPosition);
-        $(document).bind('click', function() {
-            picker.hide();
-        });
-
-
-        var line = 'hh:mm:ss';
-        for(var i = 0; i < params.length; i++) {
-            params[i].addObserver(function(sender, args) {
-                console.log(args);
-                if(currentInput) {
-                    line = line.replace(args.name, (args.val < 10 ? "0" + args.val : "" + args.val));
-                    currentInput.val(line);
-                }
+            $(document).bind('click', function() {
+                picker.hide();
             });
+
+            var setMask = function () {
+
+            }
+
+            var getTime = function () {
+                var items = picker.getItems();
+                for(var i = 0; i < items.length; i++) {
+                    items[i].setVal(
+                        $(input).val().split(':')[i] == undefined || 
+                        $(input).val().split(':')[i] == "" || 
+                        $(input).val().split(':')[i] == NaN ? 0 : $(input).val().split(':')[i]
+                    );
+                }
+            }
+            
+        
+            picker.addObserver(function(sender, args) {
+                //console.log(args);
+            });
+
+            
+            this.render = function() {
+                picker.render().appendTo('body');
+
+                return self;
+            }
+
+            this.setInput = function(inp) {
+                input = inp;
+                
+                setPosition();
+                setMask();
+                getTime();
+
+                $(input).unbind('keyup').bind('keyup', function() {
+                    setMask();
+                    getTime();
+                });
+
+                picker.show();
+            }
+
+        }
+
+        var controller = new TimePickerController(
+            new TimePicker([
+                new TimePickerItem({
+                    name: 'hh',
+                    maxval: 23
+                }),
+                new TimePickerItem({
+                    name: 'mm'
+                }),
+                new TimePickerItem({
+                    name: 'ss'
+                })
+            ])
+        ).render();
+        
+        var initialize = function() {
+            controller.setInput($(this));
         }
 
         return this.each(function () {
             $(this).attr('onclick', 'event.cancelBubble = true;');
-
             $(this).bind('focus', initialize);
 
-            $(this).bind('keydown', function (e) {
-                if(e.keyCode == 9) {
-                    picker.hide();
-                }
-            });
+            // $(this).bind('keydown', function (e) {
+            //     if(e.keyCode == 9) {
+            //         picker.hide();
+            //     }
+            //});
         });
     }
 })(jQuery);
